@@ -1,0 +1,50 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Testing & Coverage
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+# SQLite (only if used for local testing)
+*.db
+*.sqlite3
+
+# Alembic
+alembic/__pycache__/
+
+# IDE
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Misc
+.cache/
+*.swp
+
+
