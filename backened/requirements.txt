@@ -9,3 +9,6 @@ uvicorn[standard]
 sqlalchemy[asyncio]
 asyncpg
 alembic
+langgraph-checkpoint-postgres
+psycopg[binary,pool]
+
