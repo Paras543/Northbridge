@@ -8,6 +8,7 @@ import operator
 
 class CaseState(TypedDict):
     raw_brief: str
+    project_id: str
     client_brief: ClientBrief
     market_report: SpecialistReport | None
     financial_report: SpecialistReport | None
@@ -18,6 +19,8 @@ class CaseState(TypedDict):
     round_number:int
     revision_decision: RevisionDecision
     report_path:str
+
+    
     
 
 

@@ -4,9 +4,9 @@ from sqlalchemy import String, Enum, ForeignKey, LargeBinary, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
-
+from sqlalchemy import ForeignKey, Integer, Text
 from app.db.base import Base
-
+from pgvector.sqlalchemy import Vector
 
 class TeamRole(str, enum.Enum):
     admin = "admin"
@@ -14,6 +14,18 @@ class TeamRole(str, enum.Enum):
     data_scientist = "data_scientist"
     project_manager = "project_manager"
     consultant = "consultant"
+
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    document_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("documents.id"), nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(Vector(384), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    document = relationship("Document", back_populates="chunks")
 
 
 class Organization(Base):
@@ -63,7 +75,7 @@ class Project(Base):
     client_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("clients.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
-
+    
     client: Mapped["Client"] = relationship(back_populates="projects")
     documents: Mapped[list["Document"]] = relationship(back_populates="project")
     reports: Mapped[list["Report"]] = relationship(back_populates="project")
@@ -92,6 +104,7 @@ class Document(Base):
     embedding_status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
 
     project: Mapped["Project"] = relationship(back_populates="documents")
+    chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
 
 
 class Report(Base):

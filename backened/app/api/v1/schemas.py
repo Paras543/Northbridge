@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 class Start_case(BaseModel):
     raw_brief:str
+    project_id:str
 
 class Resume_case(BaseModel):
     approved:bool

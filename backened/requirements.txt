@@ -11,4 +11,9 @@ asyncpg
 alembic
 langgraph-checkpoint-postgres
 psycopg[binary,pool]
-
+python-multipart
+pypdf
+python-docx
+pgvector
+huggingface_hub
+pandas

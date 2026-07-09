@@ -1,48 +1,48 @@
 """
-In the Case service.py file here we define the connection between the pause/resume function and fastapi endpoint 
-Here we actual deaclare the Thread Id and config like the concept in the Persistance we do 
-
+Service layer for starting, resuming, and polling cases.
+Now fully async, since the graph contains async specialist nodes
+(market_analyst, Financial_analyst, Risk_ops) and must run through
+the async execution path.
 """
-
 import uuid
+
 from langgraph.types import Command
+
 from app.core.graph.builder import app as graph_app
+from app.db.session import AsyncSessionLocal
+from app.db.models import Report
 
-def start_Case(raw_brief:str) -> dict:
-    """"
-    THis everytime we start a new case we create a new thread id and return it to the user 
-    
-    """
+
+async def start_case(raw_brief: str, project_id: str) -> dict:
     thread_id = str(uuid.uuid4())
-    config = {'configurable': {'thread_id': thread_id}}
-    result = graph_app.invoke({'raw_brief': raw_brief},config=config)
-    return _buildresponse(thread_id,result,config)
+    config = {"configurable": {"thread_id": thread_id}}
+
+    result = await graph_app.ainvoke(
+        {"raw_brief": raw_brief, "project_id": project_id},
+        config=config,
+    )
+
+    return await _build_response(thread_id, result, config)
 
 
+async def resume_case(thread_id: str, approved: bool, requested_changes: list[str] | None = None) -> dict:
+    config = {"configurable": {"thread_id": thread_id}}
 
-
-def resume_Case(thread_id:str, approved:bool, request_changes:list[str] | None = None):
-    """
-    This function is used to resume the case with the given thread id
-    """
-    config = {'configurable': {'thread_id': thread_id}}
-    feedback ={
-        'approved':approved,
-        'request_changes': request_changes or []
-
-        
+    feedback = {
+        "approved": approved,
+        "requested_changes": requested_changes or [],
     }
-    result = graph_app.invoke(Command(resume=feedback),config=config )
-    return _buildresponse(thread_id,result,config)
 
-def get_case_state(thread_id:str) -> dict:
-    """
-    This function is used to get the case state with the given thread id
-    """
-    config = {'configurable': {'thread_id': thread_id}}
-    snapshot = graph_app.get_state(config)
+    result = await graph_app.ainvoke(Command(resume=feedback), config=config)
+
+    return await _build_response(thread_id, result, config)
+
+
+async def get_case_status(thread_id: str) -> dict:
+    config = {"configurable": {"thread_id": thread_id}}
+    snapshot = await graph_app.aget_state(config)
+
     if snapshot.next:
-        # there's a pending node (e.g. human_review) waiting on this thread
         interrupts = snapshot.tasks[0].interrupts if snapshot.tasks else []
         payload = interrupts[0].value if interrupts else None
         return {
@@ -58,12 +58,8 @@ def get_case_state(thread_id:str) -> dict:
     }
 
 
-def _buildresponse(thread_id:str, result:dict, config:dict) -> dict:
-    """
-    This function is used to build the response for the case service
-    """
-  
-    snapshot = graph_app.get_state(config)
+async def _build_response(thread_id: str, result: dict, config: dict) -> dict:
+    snapshot = await graph_app.aget_state(config)
 
     if snapshot.next:
         interrupts = snapshot.tasks[0].interrupts if snapshot.tasks else []
@@ -74,6 +70,11 @@ def _buildresponse(thread_id:str, result:dict, config:dict) -> dict:
             "data": payload,
         }
 
+    project_id = result.get("project_id")
+    report_text = result.get("report_path")
+    if project_id and report_text:
+        await _save_report(project_id=project_id, thread_id=thread_id, content=report_text)
+
     return {
         "thread_id": thread_id,
         "status": "completed",
@@ -81,16 +82,21 @@ def _buildresponse(thread_id:str, result:dict, config:dict) -> dict:
     }
 
 
-
-
-
-
-
-
-
-
-
-
+async def _save_report(project_id: str, thread_id: str, content: str) -> None:
+    """
+    Persists the generated report as a Report row. No more asyncio.run()
+    bridge needed — everything above this call is already async, so we
+    just await the session directly.
+    """
+    async with AsyncSessionLocal() as session:
+        report = Report(
+            project_id=uuid.UUID(project_id),
+            name=f"Consultation Report {thread_id[:8]}",
+            content=content,
+            case_thread_id=uuid.UUID(thread_id),
+        )
+        session.add(report)
+        await session.commit()
 
 
 
