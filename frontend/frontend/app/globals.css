@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap');
+@import "tailwindcss";
+
+
+
+@theme {
+  --color-primary: #000000;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1b1b1b;
+  --color-on-primary-container: #848484;
+  --color-secondary: #5d5e66;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #e3e1ec;
+  --color-on-secondary-container: #63646c;
+  --color-background: #f9f9f9;
+  --color-on-background: #1a1c1c;
+  --color-surface: #f9f9f9;
+  --color-on-surface: #1a1c1c;
+  --color-on-surface-variant: #4c4546;
+  --color-surface-bright: #f9f9f9;
+  --color-surface-dim: #dadada;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f3f4;
+  --color-surface-container: #eeeeee;
+  --color-surface-container-high: #e8e8e8;
+  --color-surface-container-highest: #e2e2e2;
+  --color-outline: #7e7576;
+  --color-outline-variant: #cfc4c5;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+
+  --radius-DEFAULT: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  --spacing-margin-page: 40px;
+  --spacing-gutter: 24px;
+  --spacing-sidebar-width: 280px;
+
+  --container-max-width-container-max: 1200px;
+
+  --font-label-caps: var(--font-geist), sans-serif;
+  --font-headline-lg: var(--font-hanken), sans-serif;
+  --font-body-sm: var(--font-inter), sans-serif;
+  --font-title-md: var(--font-hanken), sans-serif;
+  --font-headline-lg-mobile: var(--font-hanken), sans-serif;
+  --font-display-lg: var(--font-hanken), sans-serif;
+  --font-body-md: var(--font-inter), sans-serif;
+  --font-mono-label: var(--font-geist), monospace;
+
+  --text-label-caps: 12px;
+  --text-label-caps--line-height: 16px;
+  --text-label-caps--letter-spacing: 0.05em;
+  --text-label-caps--font-weight: 600;
+
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 600;
+
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--font-weight: 400;
+
+  --text-title-md: 20px;
+  --text-title-md--line-height: 28px;
+  --text-title-md--font-weight: 500;
+
+  --text-headline-lg-mobile: 24px;
+  --text-headline-lg-mobile--line-height: 32px;
+  --text-headline-lg-mobile--font-weight: 600;
+
+  --text-display-lg: 48px;
+  --text-display-lg--line-height: 56px;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 600;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-md--font-weight: 400;
+
+  --text-mono-label: 13px;
+  --text-mono-label--line-height: 18px;
+  --text-mono-label--font-weight: 400;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-outline-variant); border-radius: 10px; }
+

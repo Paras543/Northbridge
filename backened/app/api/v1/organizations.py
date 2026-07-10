@@ -27,8 +27,8 @@ class OrganizationOut(BaseModel):
 
 router = APIRouter(prefix="/organizations",tags=['organizations'])
 
-@router.post("/",response_model=OrganizationOut)
-async def create_organization(payload:OrganizationCreate,db:AsyncSession=Depends(get_db)):
+@router.post("", response_model=OrganizationOut)
+async def create_organization(payload: OrganizationCreate, db: AsyncSession = Depends(get_db)):
     org = Organization(name=payload.name)
     db.add(org)
     await db.commit()

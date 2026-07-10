@@ -1,3 +1,11 @@
+"""
+Clients API — create, list, and get consulting clients.
+
+org_id is now optional on creation: if omitted the endpoint auto-creates
+(or reuses the first existing) organization, so the frontend doesn't need
+to surface org management to the user at this stage.
+"""
+
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -8,17 +16,22 @@ from datetime import datetime
 from sqlalchemy import select
 
 router = APIRouter(prefix="/clients", tags=["clients"])
+
+
 class ClientCreate(BaseModel):
-    org_id: uuid.UUID
-    company_name:str
+    # org_id is optional — if not supplied we auto-create/reuse a default org.
+    org_id: uuid.UUID | None = None
+    company_name: str
     email: str
-    industry:str
+    industry: str | None = "Other"
     notes: str | None = None
+
 
 class ClientOut(BaseModel):
     org_id: uuid.UUID
     id: uuid.UUID
     company_name: str
+    email: str
     industry: str
     notes: str | None = None
     created_at: datetime
@@ -26,19 +39,32 @@ class ClientOut(BaseModel):
     class Config:
         from_attributes = True
 
-@router.post("",response_model=ClientOut)
-async def create_client(payload: ClientCreate,db:AsyncSession = Depends(get_db)):
-    org = await db.get(Organization,payload.org_id)
-    if org is None:
-        raise HTTPException(status_code=404,detail='Organization not found')
-    
-    client = Client(
-        org_id = payload.org_id,
-        company_name = payload.company_name,
-        email = payload.email,
-        industry = payload.industry,
-        notes = payload.notes
 
+@router.post("", response_model=ClientOut)
+async def create_client(payload: ClientCreate, db: AsyncSession = Depends(get_db)):
+    if payload.org_id is not None:
+        # Caller supplied an org — validate it exists.
+        org = await db.get(Organization, payload.org_id)
+        if org is None:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        org_id = payload.org_id
+    else:
+        # Auto-resolve: reuse the first org or create a default one so that the
+        # frontend can create clients without an org management flow.
+        result = await db.execute(select(Organization).limit(1))
+        org = result.scalar_one_or_none()
+        if org is None:
+            org = Organization(name="Default Organization")
+            db.add(org)
+            await db.flush()  # get the generated id without committing yet
+        org_id = org.id
+
+    client = Client(
+        org_id=org_id,
+        company_name=payload.company_name,
+        email=payload.email,
+        industry=payload.industry or "Other",
+        notes=payload.notes,
     )
     db.add(client)
     await db.commit()
@@ -46,28 +72,21 @@ async def create_client(payload: ClientCreate,db:AsyncSession = Depends(get_db))
     return client
 
 
-
-@router.get("",response_model=list[ClientOut])
-async def list_clients(org_id: uuid.UUID | None = Query(default=None),db:AsyncSession = Depends(get_db)):
+@router.get("", response_model=list[ClientOut])
+async def list_clients(
+    org_id: uuid.UUID | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+):
     query = select(Client)
     if org_id is not None:
         query = query.where(Client.org_id == org_id)
     result = await db.execute(query)
     return result.scalars().all()
 
-@router.get("/{client_id}",response_model=ClientOut)
-async def get_clients(client_id:uuid.UUID,db:AsyncSession = Depends(get_db)):
-    client = await db.get(Client,client_id)
+
+@router.get("/{client_id}", response_model=ClientOut)
+async def get_client(client_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    client = await db.get(Client, client_id)
     if client is None:
-        raise HTTPException(status_code=404,detail="Not able to find the Client")
+        raise HTTPException(status_code=404, detail="Client not found")
     return client
-
-
-
-    
-
-
-
-
-
-

@@ -6,7 +6,7 @@ from pydantic import ConfigDict
 
 
 class Settings(BaseSettings):
-    # pyrefly: ignore [unexpected-keyword]
+    
     model_config = ConfigDict(env_file=".env", extra="ignore")
 
     DATABASE_URL: str
@@ -21,3 +21,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+
+

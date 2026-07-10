@@ -1,30 +1,21 @@
 """
-Persistent, Postgres-backed checkpointer (step 2 of the build roadmap).
+Persistent, Postgres-backed async checkpointer.
 
-Replaces InMemorySaver, which loses all in-flight case state — including
-paused human_review() interrupts — the moment the process restarts.
-This uses the same Neon database as the rest of the app, but through
-psycopg (sync) rather than asyncpg, because the graph's node functions
-are themselves synchronous (llm.invoke, not await). The two connections
-(this one, and the async SQLAlchemy one in db/session.py) are entirely
-independent and don't conflict — they just both point at Neon.
-
-IMPORTANT: PostgresSaver.setup() must be called once (creates the
-checkpointer's own tables: checkpoints, checkpoint_writes, etc.) before
-first use. Safe to call repeatedly — it's idempotent.
+Replaces InMemorySaver and the sync PostgresSaver. Since our graph contains
+async nodes (market_analyst, Financial_analyst, Risk_ops) and runs in an
+async FastAPI context, we MUST use the async checkpointer (AsyncPostgresSaver)
+so that graph_app.ainvoke works correctly without throwing NotImplementedError.
 """
-from psycopg_pool import ConnectionPool
-from langgraph.checkpoint.postgres import PostgresSaver
+
+from psycopg_pool import AsyncConnectionPool
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from app.config import settings
 
-_pool: ConnectionPool | None = None
-_saver: PostgresSaver | None = None
+_pool: AsyncConnectionPool | None = None
+_saver: AsyncPostgresSaver | None = None
 
-"""
-This allows the schemas to be defined so that app just stucks with the allowed modules and classes for msgpack serialization.
-"""
 _ALLOWED_MSGPACK_MODULES = [
     ("app.core.graph.schemas", "ClientBrief"),
     ("app.core.graph.schemas", "SpecialistReport"),
@@ -37,29 +28,37 @@ _ALLOWED_MSGPACK_MODULES = [
 
 def _to_psycopg_url(url: str) -> str:
     """
-    settings.DATABASE_URL is in asyncpg form for the FastAPI/SQLAlchemy
-    
+    settings.DATABASE_URL is in asyncpg form for the FastAPI/SQLAlchemy connection.
+    We convert it to a standard postgresql url for psycopg.
     """
     plain = url.replace("postgresql+asyncpg://", "postgresql://")
     plain = plain.replace("ssl=require", "sslmode=require")
     return plain
 
 
-def get_checkpointer() -> PostgresSaver:
+def get_checkpointer() -> AsyncPostgresSaver:
     global _pool, _saver
     if _saver is None:
         conn_string = _to_psycopg_url(settings.DATABASE_URL)
-        _pool = ConnectionPool(
+        # We pass open=False so it is not opened at import time.
+        # This avoids "AsyncConnectionPool open with no running loop" errors.
+        # The pool is opened inside setup_checkpointer() during startup lifespan.
+        _pool = AsyncConnectionPool(
             conninfo=conn_string,
             max_size=10,
+            open=False,
             kwargs={"autocommit": True, "prepare_threshold": 0},
         )
-        _saver = PostgresSaver(
+        _saver = AsyncPostgresSaver(
             _pool,
             serde=JsonPlusSerializer(allowed_msgpack_modules=_ALLOWED_MSGPACK_MODULES),
         )
-        _saver.setup()  
     return _saver
 
 
-
+async def setup_checkpointer() -> None:
+    """Idempotently initialize checkpointer tables in the database."""
+    saver = get_checkpointer()
+    if _pool is not None:
+        await _pool.open()
+    await saver.setup()

@@ -129,3 +129,30 @@ class Report(Base):
 
 
 
+class ConsultationStatus(str, enum.Enum):
+    RUNNING = "running"
+    INTERRUPTED = "interrupted"
+    COMPLETED = "completed"
+
+class Consultation(Base):
+    """
+    Tracks LangGraph case threads so they're queryable — the graph's own
+    PostgresSaver checkpoints hold the actual state, but nothing else
+    maps thread_id -> project_id/status in a way we can list/filter on.
+    This table is a thin index over that, updated by case_service as the
+    case moves through running -> interrupted -> completed.
+    """
+    __tablename__ = "consultations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    thread_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), unique=True, nullable=False, index=True)
+    project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=ConsultationStatus.RUNNING.value)
+    raw_brief: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    project: Mapped["Project"] = relationship()
+
+
+    

@@ -36,7 +36,13 @@ graph.add_conditional_edges('human_review',check_human_review,{'approved':'repor
 graph.add_edge('report_generation',END)
 
 
-app = graph.compile(checkpointer=get_checkpointer())
+_app = None
+
+def get_graph_app():
+    global _app
+    if _app is None:
+        _app = graph.compile(checkpointer=get_checkpointer())
+    return _app
 
 
 
